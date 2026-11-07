@@ -1,0 +1,7 @@
+ai-job-search/
+career-ops/
+logs/*.log
+bridge/forwarded.json
+.env
+tracker/site/
+logs/

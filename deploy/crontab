@@ -1,0 +1,6 @@
+# Job-hunt loop schedule. Times are Perth (TZ=Australia/Perth in the container).
+# Off the hour on purpose. Each script takes a lock, so runs never overlap.
+# Scripts are started with bash so this also works on a Windows-mounted folder (no exec bit).
+20 7 * * *        bash /work/bin/run-digest.sh
+40 7,12,17 * * *  bash /work/bin/run-cycle.sh
+10 8,13,18 * * *  bash /work/bin/run-submit.sh

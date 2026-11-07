@@ -1,0 +1,27 @@
+# Windows (Docker Desktop) version of the loop. Use through windows\jobhunt.ps1, or:
+#   docker compose -f docker-compose.windows.yml up -d --build
+# Differences from docker-compose.yml (Raspberry Pi):
+#  - career-ops' Linux node_modules live in a Docker volume, so the Windows copy in this folder
+#    (used by the desktop app) is never overwritten;
+#  - the noVNC sign-in screen is only reachable from this PC (127.0.0.1).
+services:
+  hunt:
+    build:
+      context: ./deploy
+    image: jobhunt-loop:latest
+    container_name: jobhunt
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      TZ: Australia/Perth
+    volumes:
+      - ./:/work
+      - hunt-home:/home/node
+      - careerops-modules:/work/career-ops/node_modules
+    ports:
+      - "127.0.0.1:6080:6080"
+    shm_size: "1gb"
+volumes:
+  hunt-home:
+  careerops-modules:

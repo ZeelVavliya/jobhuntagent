@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Job hunt tracker</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#16181d; --mute:#5d6470; --line:#e3e6eb; --accent:#2457d6; --ok:#147a43; --warn:#a15c00; --bad:#b42318; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --card:#181b21; --ink:#e8eaee; --mute:#9aa2ae; --line:#2a2f38; --accent:#7aa2ff; --ok:#4cc38a; --warn:#f0a43a; --bad:#ff7a6e; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:20px 16px 8px; max-width:1100px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--mute); font-size:13px; }
+  main { max-width:1100px; margin:0 auto; padding:0 16px 40px; }
+  section { margin-top:22px; }
+  h2 { font-size:16px; margin:0 0 10px; display:flex; gap:8px; align-items:baseline; }
+  h2 .n { color:var(--mute); font-weight:400; font-size:13px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-top:14px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .stat b { display:block; font-size:22px; }
+  .stat span { color:var(--mute); font-size:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px; }
+  .row1 { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+  .title { font-weight:600; }
+  .co { color:var(--mute); }
+  .pill { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--mute); margin-right:4px; }
+  .score { font-weight:700; }
+  .s-hi { color:var(--ok); } .s-mid { color:var(--warn); } .s-lo { color:var(--bad); }
+  .links { margin-top:8px; display:flex; gap:12px; flex-wrap:wrap; font-size:14px; }
+  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+  .note { margin-top:6px; font-size:13px; color:var(--warn); }
+  button.approve { border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:8px; padding:7px 14px; font-weight:600; cursor:pointer; min-width:120px; }
+  button.approve.on { background:var(--ok); border-color:var(--ok); color:#fff; }
+  button.approve:disabled { opacity:.5; cursor:not-allowed; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:14px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:12px; color:var(--mute); font-weight:600; cursor:pointer; user-select:none; white-space:nowrap; }
+  tr:last-child td { border-bottom:none; }
+  .filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .filters input, .filters select { font:inherit; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+  details { margin-top:8px; } summary { cursor:pointer; color:var(--accent); font-size:14px; }
+  pre { white-space:pre-wrap; word-wrap:break-word; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; font-size:13px; max-height:420px; overflow:auto; }
+  .copy { font-size:12px; margin-left:8px; }
+  .log { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; color:var(--mute); white-space:pre-wrap; }
+  .empty { color:var(--mute); font-size:14px; padding:6px 0; }
+  .tablewrap { overflow-x:auto; }
+  @media (max-width: 640px) { #apps th:nth-child(1), #apps td:nth-child(1), #apps th:nth-child(2), #apps td:nth-child(2) { display:none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Job hunt tracker</h1>
+  <div class="sub" id="updated"></div>
+  <div class="stats" id="stats"></div>
+</header>
+<main>
+  <section>
+    <h2>Waiting for your OK <span class="n" id="wcount"></span></h2>
+    <div class="sub" style="margin-bottom:10px">Approve a row and the next submit run (08:10, 13:10, 18:10 Perth) submits it. Rows marked ⚠ or 🔒 need you first.</div>
+    <div id="waiting"></div>
+  </section>
+  <section>
+    <h2>Applications <span class="n" id="acount"></span></h2>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Search company or role">
+      <select id="st"><option value="">All statuses</option></select>
+      <select id="ms"><option value="0">Any score</option><option value="3">3.0+</option><option value="3.5">3.5+</option><option value="4">4.0+</option></select>
+    </div>
+    <div class="tablewrap"><table id="apps"><thead><tr>
+      <th data-k="num">#</th><th data-k="date">Date</th><th data-k="company">Company</th><th data-k="role">Role</th><th data-k="score">Score</th><th data-k="status">Status</th><th>Links</th>
+    </tr></thead><tbody></tbody></table></div>
+    <div id="detail"></div>
+  </section>
+  <section>
+    <h2>Recent runs</h2>
+    <div class="card log" id="log"></div>
+  </section>
+</main>
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const $ = (s) => document.querySelector(s);
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return e;
+}
+const safeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : null;
+const scoreEl = (s) => s == null ? h('span', {}, '—') : h('span', { class: 'score ' + (s >= 4 ? 's-hi' : s >= 3 ? 's-mid' : 's-lo') }, s.toFixed(1));
+const link = (href, text) => href ? h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text) : null;
+
+$('#updated').textContent = 'Updated ' + new Date(D.generated).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' });
+const byStatus = {};
+for (const a of D.apps) byStatus[a.status] = (byStatus[a.status] || 0) + 1;
+const stats = [['Tracked', D.apps.length], ['Waiting', D.waiting.length], ['Applied', byStatus.Applied || 0], ['Interview', byStatus.Interview || 0], ['Score 4.0+', D.apps.filter((a) => a.score >= 4).length]];
+$('#stats').append(...stats.map(([k, v]) => h('div', { class: 'stat' }, h('b', {}, v), h('span', {}, k))));
+
+let approvals = {};
+async function loadApprovals() {
+  try { const r = await fetch('/api/approve', { cache: 'no-store' }); if (r.ok) approvals = (await r.json()).approved || {}; } catch {}
+  renderWaiting();
+}
+async function setApproval(num, on, btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/approve', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ num, approved: on }) });
+    if (!r.ok) throw new Error((await r.json()).error || r.status);
+    approvals = (await r.json()).approved || {};
+  } catch (e) { alert('Could not save: ' + e.message); }
+  renderWaiting();
+}
+function renderWaiting() {
+  const box = $('#waiting'); box.replaceChildren();
+  $('#wcount').textContent = D.waiting.length ? D.waiting.length + ' waiting' : '';
+  if (!D.waiting.length) { box.append(h('div', { class: 'empty' }, 'Nothing waiting. New pre-filled applications appear here after each hunt run.')); return; }
+  for (const w of D.waiting) {
+    const on = Boolean(approvals[String(w.num)]) || w.approved;
+    const blocked = /⚠|🔒/.test(w.notes || '');
+    const btn = h('button', { class: 'approve' + (on ? ' on' : ''), disabled: blocked && !on ? true : null,
+      onclick: () => setApproval(w.num, !on, btn) }, on ? '✓ Approved' : 'Approve');
+    const app = D.apps.find((a) => a.num === w.num) || {};
+    box.append(h('div', { class: 'card' },
+      h('div', { class: 'row1' },
+        h('div', {}, h('div', { class: 'title' }, `#${w.num} · ${w.role || app.role || ''}`), h('div', { class: 'co' }, w.company || app.company || ''),
+          h('div', { style: 'margin-top:6px' }, h('span', { class: 'pill' }, w.channel || '—'), h('span', { class: 'pill' }, 'score ' + (w.score || app.score || '—')), h('span', { class: 'pill' }, 'pre-filled ' + (w.prefilled || '—')))),
+        btn),
+      w.notes ? h('div', { class: 'note' }, w.notes) : null,
+      h('div', { class: 'links' }, link(safeUrl(w.applyUrl), 'Application form ↗'), link(safeUrl(app.url), 'Posting ↗'), app.pdfHref ? link(app.pdfHref, 'Tailored CV (PDF)') : null)));
+  }
+}
+
+const sel = $('#st');
+for (const s of Object.keys(byStatus).sort()) sel.append(h('option', { value: s }, `${s} (${byStatus[s]})`));
+let sortK = 'num', sortDir = -1;
+document.querySelectorAll('th[data-k]').forEach((th) => th.addEventListener('click', () => { const k = th.dataset.k; sortDir = sortK === k ? -sortDir : -1; sortK = k; renderApps(); }));
+['#q', '#st', '#ms'].forEach((s) => $(s).addEventListener('input', renderApps));
+function renderApps() {
+  const q = $('#q').value.toLowerCase(), st = $('#st').value, ms = Number($('#ms').value);
+  let rows = D.apps.filter((a) => (!q || (a.company + ' ' + a.role).toLowerCase().includes(q)) && (!st || a.status === st) && ((a.score ?? 0) >= ms));
+  rows.sort((a, b) => { const x = a[sortK] ?? '', y = b[sortK] ?? ''; return (x > y ? 1 : x < y ? -1 : 0) * sortDir; });
+  $('#acount').textContent = rows.length + ' of ' + D.apps.length;
+  const tb = $('#apps tbody'); tb.replaceChildren();
+  if (!rows.length) tb.append(h('tr', {}, h('td', { colspan: 7, class: 'empty' }, 'No applications yet.')));
+  for (const a of rows) {
+    tb.append(h('tr', {},
+      h('td', {}, a.num), h('td', {}, a.date), h('td', {}, a.company), h('td', {}, a.role), h('td', {}, scoreEl(a.score)),
+      h('td', {}, a.status),
+      h('td', {}, h('div', { class: 'links', style: 'margin:0' }, link(safeUrl(a.url), 'Posting'), a.pdfHref ? link(a.pdfHref, 'CV') : null,
+        h('a', { href: '#', onclick: (e) => { e.preventDefault(); showDetail(a); } }, 'Details')))));
+  }
+}
+function copyBtn(text) { return h('button', { class: 'copy', onclick: () => navigator.clipboard.writeText(text) }, 'Copy'); }
+function showDetail(a) {
+  const box = $('#detail'); box.replaceChildren();
+  const r = a.report || {};
+  box.append(h('div', { class: 'card', style: 'margin-top:12px' },
+    h('div', { class: 'title' }, `#${a.num} · ${a.role}`), h('div', { class: 'co' }, a.company),
+    r.verdict ? h('p', {}, r.verdict) : null,
+    h('div', {}, r.decision ? h('span', { class: 'pill' }, r.decision) : null, r.archetype ? h('span', { class: 'pill' }, r.archetype) : null, r.workAuth ? h('span', { class: 'pill' }, 'Work auth: ' + r.workAuth) : null),
+    a.notes ? h('div', { class: 'note' }, a.notes) : null,
+    a.outreach ? h('details', { open: true }, h('summary', {}, 'Outreach draft', copyBtn(a.outreach)), h('pre', {}, a.outreach)) : null,
+    a.reportText ? h('details', {}, h('summary', {}, 'Full evaluation report'), h('pre', {}, a.reportText)) : null));
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+$('#log').textContent = D.log.length ? D.log.join('\n') : 'No runs yet.';
+renderApps();
+renderWaiting();
+loadApprovals();
+</script>
+</body>
+</html>

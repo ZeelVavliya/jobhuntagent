@@ -1,0 +1,20 @@
+# Raspberry Pi 5:  cp .env.example .env  (fill it in)  then  docker compose up -d --build
+services:
+  hunt:
+    build:
+      context: ./deploy
+    image: jobhunt-loop:latest
+    container_name: jobhunt
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      TZ: Australia/Perth
+    volumes:
+      - ./:/work                 # this folder: career-ops, ai-job-search, tracker, your data
+      - hunt-home:/home/node     # Claude login, browser profile (LinkedIn/Seek sessions)
+    ports:
+      - "6080:6080"              # noVNC, only for signing in to sites (VNC_PASSWORD protects it)
+    shm_size: "1gb"
+volumes:
+  hunt-home:
